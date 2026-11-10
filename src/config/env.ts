@@ -15,6 +15,10 @@ export interface EnvConfig {
   CLIENT_URL: string;
   MONGODB_URI: string;
   DB_NAME: string;
+  BETTER_AUTH_SECRET: string;
+  BETTER_AUTH_URL: string;
+  ADMIN_EMAIL: string;
+  ADMIN_PASSWORD: string;
 }
 
 export const env: EnvConfig = {
@@ -23,4 +27,8 @@ export const env: EnvConfig = {
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
   MONGODB_URI: process.env.MONGODB_URI || '',
   DB_NAME: process.env.DB_NAME || 'morning_football_academy',
+  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || 'a-very-secure-random-32-character-secret-key-for-mfa',
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || `http://localhost:${process.env.PORT || 5000}`,
+  ADMIN_EMAIL: (process.env.ADMIN_EMAIL || 'admin@morningfootball.com').toLowerCase().trim(),
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || '',
 };

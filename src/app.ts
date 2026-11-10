@@ -2,16 +2,18 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { toNodeHandler } from 'better-auth/node';
 import { env } from './config/env.js';
+import { auth } from './config/auth.js';
 import apiRoutes from './routes/index.js';
-import { notFoundHandler, errorHandler } from './middlewares/errorHandler.js';
+import { notFoundHandler, errorHandler } from './middleware/error.middleware.js';
 
 const app: Application = express();
 
 // Security HTTP headers
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration supporting session cookies across origins
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -19,8 +21,13 @@ app.use(
       if (!origin) {
         return callback(null, true);
       }
-      // Allow configured client URL or localhost
-      const allowedOrigins = [env.CLIENT_URL, 'http://localhost:3000'];
+      const allowedOrigins = [
+        env.CLIENT_URL,
+        'http://localhost:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5000',
+      ];
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -28,14 +35,17 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   })
 );
 
 // HTTP request logger
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Body parsers
+// Official Better Auth Express handler (mounted before Express body parsers)
+app.all('/api/auth/{*splat}', toNodeHandler(auth));
+
+// Body parsers for general API routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -46,6 +56,7 @@ app.get('/', (_req: Request, res: Response) => {
     message: 'Welcome to Morning Football Academy API',
     version: '1.0.0',
     documentation: '/api/v1',
+    authEndpoints: '/api/auth',
     healthCheck: '/api/v1/health',
   });
 });

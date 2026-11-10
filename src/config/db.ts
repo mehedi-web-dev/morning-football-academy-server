@@ -1,4 +1,4 @@
-import { MongoClient, Db, ServerApiVersion } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import { env } from './env.js';
 
 let client: MongoClient | null = null;
@@ -16,12 +16,11 @@ export async function connectDB(): Promise<Db> {
 
   try {
     client = new MongoClient(env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 15000,
-      serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-      },
+      readPreference: 'primaryPreferred',
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+      retryWrites: true,
+      retryReads: true,
     });
 
     await client.connect();

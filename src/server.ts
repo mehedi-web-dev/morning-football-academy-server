@@ -2,6 +2,8 @@ import { Server } from 'http';
 import app from './app.js';
 import { env } from './config/env.js';
 import { connectDB, closeDB } from './config/db.js';
+import { initializeIndexes } from './database/indexes.js';
+import { initializeAdmin } from './config/auth.js';
 
 let server: Server | null = null;
 
@@ -11,9 +13,24 @@ async function startServer(): Promise<void> {
     console.log('[Server] Connecting to MongoDB Atlas before accepting requests...');
     await connectDB();
 
+    // Initialize collection indexes
+    try {
+      await initializeIndexes();
+    } catch (indexError) {
+      console.warn('[Database] Failed to ensure indexes during startup:', indexError);
+    }
+
+    // Initialize authorized single admin account
+    try {
+      await initializeAdmin();
+    } catch (authError) {
+      console.warn('[Auth] Failed to initialize admin account during startup:', authError);
+    }
+
     server = app.listen(env.PORT, () => {
       console.log(`[Server] Morning Football Academy Server is running on port ${env.PORT} (${env.NODE_ENV})`);
       console.log(`[Server] Health check available at: http://localhost:${env.PORT}/api/v1/health`);
+      console.log(`[Server] Authentication endpoints available at: http://localhost:${env.PORT}/api/auth`);
     });
   } catch (error) {
     console.error('[Server] Failed to connect to database or start server:', error);
