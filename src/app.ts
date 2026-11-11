@@ -1,12 +1,14 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
+import * as helmetModule from 'helmet';
 import morgan from 'morgan';
 import { toNodeHandler } from 'better-auth/node';
 import { env } from './config/env.js';
 import { auth } from './config/auth.js';
 import apiRoutes from './routes/index.js';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware.js';
+
+const helmet = helmetModule.default ?? helmetModule;
 
 const app: Application = express();
 
