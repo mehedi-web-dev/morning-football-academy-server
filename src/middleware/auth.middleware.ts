@@ -8,11 +8,7 @@ export interface AuthenticatedRequest extends Request {
   session?: typeof auth.$Infer.Session.session;
 }
 
-/**
- * Middleware ensuring incoming request has a valid session belonging to the authorized single Admin.
- * Returns 401 for unauthenticated requests.
- * Returns 403 for authenticated users lacking authorized Admin privileges.
- */
+
 export async function requireAdmin(
   req: AuthenticatedRequest,
   res: Response,
