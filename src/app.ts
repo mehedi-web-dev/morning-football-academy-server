@@ -8,12 +8,10 @@ import { auth } from './config/auth.js';
 import apiRoutes from './routes/index.js';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware.js';
 
-const helmet = helmetModule.default ?? helmetModule;
-
 const app: Application = express();
 
 // Security HTTP headers
-app.use(helmet());
+app.use(helmetModule.default());
 
 // CORS configuration supporting session cookies across origins
 app.use(
