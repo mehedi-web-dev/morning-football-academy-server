@@ -1,6 +1,20 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import * as helmetModule from 'helmet';
+import {
+  contentSecurityPolicy,
+  crossOriginOpenerPolicy,
+  crossOriginResourcePolicy,
+  originAgentCluster,
+  referrerPolicy,
+  strictTransportSecurity,
+  xContentTypeOptions,
+  xDnsPrefetchControl,
+  xDownloadOptions,
+  xFrameOptions,
+  xPermittedCrossDomainPolicies,
+  xPoweredBy,
+  xXssProtection,
+} from 'helmet';
 import morgan from 'morgan';
 import { toNodeHandler } from 'better-auth/node';
 import { env } from './config/env.js';
@@ -10,8 +24,22 @@ import { notFoundHandler, errorHandler } from './middleware/error.middleware.js'
 
 const app: Application = express();
 
-// Security HTTP headers
-app.use(helmetModule.default());
+// Security HTTP headers (comprehensive Helmet security suite)
+app.use([
+  contentSecurityPolicy(),
+  crossOriginOpenerPolicy(),
+  crossOriginResourcePolicy(),
+  originAgentCluster(),
+  referrerPolicy(),
+  strictTransportSecurity(),
+  xContentTypeOptions(),
+  xDnsPrefetchControl(),
+  xDownloadOptions(),
+  xFrameOptions(),
+  xPermittedCrossDomainPolicies(),
+  xPoweredBy(),
+  xXssProtection(),
+]);
 
 // CORS configuration supporting session cookies across origins
 app.use(
