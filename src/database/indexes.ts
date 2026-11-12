@@ -84,6 +84,26 @@ export async function initializeIndexes(database?: Db): Promise<IndexInitResult[
     indexes: adminIndexes.map((idx) => idx.name as string),
   });
 
+  // 7. Auth User Indexes (Better Auth)
+  const userIndexes: IndexDescription[] = [
+    { key: { email: 1 }, unique: true, name: 'uniq_user_email' },
+  ];
+  await db.collection('user').createIndexes(userIndexes);
+  results.push({
+    collection: 'user',
+    indexes: userIndexes.map((idx) => idx.name as string),
+  });
+
+  // 8. Auth Account Indexes (Better Auth)
+  const accountIndexes: IndexDescription[] = [
+    { key: { userId: 1, providerId: 1 }, unique: true, name: 'uniq_account_user_provider' },
+  ];
+  await db.collection('account').createIndexes(accountIndexes);
+  results.push({
+    collection: 'account',
+    indexes: accountIndexes.map((idx) => idx.name as string),
+  });
+
   console.log('[Database] All collection indexes successfully initialized.');
   return results;
 }
