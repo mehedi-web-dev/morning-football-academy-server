@@ -1,65 +1,99 @@
 import { MongoClient, Db } from 'mongodb';
 import { env } from './env.js';
 
-let client: MongoClient | null = null;
-let db: Db | null = null;
-let connectionPromise: Promise<Db> | null = null;
+interface MongoGlobalState {
+  client: MongoClient | null;
+  db: Db | null;
+  connectionPromise: Promise<Db> | null;
+}
+
+const globalForMongo = globalThis as unknown as {
+  __mongoGlobalState?: MongoGlobalState;
+};
+
+if (!globalForMongo.__mongoGlobalState) {
+  globalForMongo.__mongoGlobalState = {
+    client: null,
+    db: null,
+    connectionPromise: null,
+  };
+}
+
+const state = globalForMongo.__mongoGlobalState;
 
 export async function connectDB(): Promise<Db> {
-  if (db && client) {
-    return db;
+  if (state.db && state.client) {
+    return state.db;
   }
 
-  if (connectionPromise) {
-    return await connectionPromise;
+  if (state.connectionPromise) {
+    return await state.connectionPromise;
   }
 
   if (!env.MONGODB_URI) {
     console.warn('[Database] MONGODB_URI is not set. Database connection skipped.');
-    throw new Error('MONGODB_URI is not defined in environment variables');
+    const error: any = new Error('MONGODB_URI is not defined in environment variables');
+    error.statusCode = 503;
+    throw error;
   }
 
-  connectionPromise = (async () => {
+  state.connectionPromise = (async () => {
     try {
-      client = new MongoClient(env.MONGODB_URI, {
+      const client = new MongoClient(env.MONGODB_URI, {
         readPreference: 'primaryPreferred',
-        serverSelectionTimeoutMS: 30000,
-        connectTimeoutMS: 30000,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
         retryWrites: true,
         retryReads: true,
       });
 
       await client.connect();
-      db = client.db(env.DB_NAME);
+      const db = client.db(env.DB_NAME);
+      state.client = client;
+      state.db = db;
       console.log(`[Database] Successfully connected to MongoDB database: ${env.DB_NAME}`);
       return db;
-    } catch (error) {
-      console.error('[Database] Failed to connect to MongoDB:', error);
-      client = null;
-      db = null;
+    } catch (error: any) {
+      console.error('[Database] Failed to connect to MongoDB:', error?.message || error);
+      state.client = null;
+      state.db = null;
+      if (error && typeof error === 'object') {
+        error.statusCode = 503;
+      }
       throw error;
     } finally {
-      connectionPromise = null;
+      state.connectionPromise = null;
     }
   })();
 
-  return await connectionPromise;
+  return await state.connectionPromise;
 }
 
 export function getDB(): Db {
-  if (!db) {
-    throw new Error('Database is not initialized. Call connectDB first.');
+  if (!state.db) {
+    const error: any = new Error(
+      'Database is not initialized. Database service unavailable.'
+    );
+    error.statusCode = 503;
+    throw error;
   }
-  return db;
+  return state.db;
+}
+
+export async function getDBAsync(): Promise<Db> {
+  if (state.db && state.client) {
+    return state.db;
+  }
+  return await connectDB();
 }
 
 export function getMongoClient(): MongoClient | null {
-  return client;
+  return state.client;
 }
 
 export async function isDBConnected(): Promise<boolean> {
   try {
-    const activeDb = db || (await connectDB());
+    const activeDb = state.db || (await connectDB());
     await activeDb.command({ ping: 1 });
     return true;
   } catch {
@@ -68,11 +102,11 @@ export async function isDBConnected(): Promise<boolean> {
 }
 
 export async function closeDB(): Promise<void> {
-  connectionPromise = null;
-  if (client) {
-    await client.close();
-    client = null;
-    db = null;
+  state.connectionPromise = null;
+  if (state.client) {
+    await state.client.close();
+    state.client = null;
+    state.db = null;
     console.log('[Database] MongoDB connection closed.');
   }
 }

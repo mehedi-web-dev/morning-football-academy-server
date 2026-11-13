@@ -6,6 +6,9 @@ import { env } from './env.js';
 // Dynamic proxy to resolve the active MongoDB Db instance on demand
 const dbProxy = new Proxy({} as any, {
   get(_target, prop) {
+    if (prop === 'then' || prop === 'catch' || prop === 'finally') {
+      return undefined;
+    }
     const database = getDB();
     const value = (database as any)[prop];
     if (typeof value === 'function') {

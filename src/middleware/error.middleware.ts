@@ -45,6 +45,19 @@ export function errorHandler(
     message = 'Invalid ID format provided';
   }
 
+  // Handle database connection or availability errors (ensure 503 instead of 500)
+  if (
+    err.name === 'MongoServerSelectionError' ||
+    err.name === 'MongoNetworkError' ||
+    err.name === 'MongoTimeoutError' ||
+    message.includes('Database is not initialized') ||
+    message.includes('connect ECONNREFUSED') ||
+    message.includes('getaddrinfo ENOTFOUND')
+  ) {
+    statusCode = 503;
+    message = 'Database service is currently unavailable. Please retry shortly.';
+  }
+
   if (env.NODE_ENV !== 'test') {
     console.error(`[Error] ${statusCode} - ${message}`);
     if (err.stack && env.NODE_ENV === 'development') {

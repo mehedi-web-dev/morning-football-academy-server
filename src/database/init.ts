@@ -3,9 +3,25 @@ import { Db } from 'mongodb';
 import { connectDB } from '../config/db.js';
 import { initializeIndexes } from './indexes.js';
 import { initializeAdmin } from '../config/auth.js';
+import { env } from '../config/env.js';
 
-let isInitialized = false;
-let initPromise: Promise<void> | null = null;
+interface InitGlobalState {
+  isInitialized: boolean;
+  initPromise: Promise<Db> | null;
+}
+
+const globalForInit = globalThis as unknown as {
+  __initGlobalState?: InitGlobalState;
+};
+
+if (!globalForInit.__initGlobalState) {
+  globalForInit.__initGlobalState = {
+    isInitialized: false,
+    initPromise: null,
+  };
+}
+
+const initState = globalForInit.__initGlobalState;
 
 /**
  * Ensures that the database connection is established, and required collection
@@ -14,51 +30,57 @@ let initPromise: Promise<void> | null = null;
  * Concurrent calls during cold start share the same initialization promise.
  */
 export async function ensureDatabaseInitialized(): Promise<Db> {
-  const db = await connectDB();
-
-  if (isInitialized) {
-    return db;
+  // Fast path: if already fully initialized, return the active database immediately
+  if (initState.isInitialized) {
+    return await connectDB();
   }
 
-  if (initPromise) {
-    await initPromise;
-    return db;
+  // If initialization is in progress by another concurrent request, join it
+  if (initState.initPromise) {
+    return await initState.initPromise;
   }
 
-  initPromise = (async () => {
+  initState.initPromise = (async () => {
     try {
-      // 1. Ensure collection indexes exist (idempotent createIndexes)
+      // 1. Establish database connection (concurrency-safe singleton)
+      const db = await connectDB();
+
+      // 2. Ensure collection indexes exist (idempotent createIndexes)
       try {
         await initializeIndexes(db);
       } catch (indexError) {
         console.warn('[Database] Warning: Failed to ensure indexes during initialization:', indexError);
       }
 
-      // 2. Ensure initial authorized single admin exists (idempotent, never overwrites credentials)
+      // 3. Ensure initial authorized single admin exists (idempotent, concurrency-safe)
       try {
         await initializeAdmin();
       } catch (authError) {
         console.warn('[Auth] Warning: Failed to initialize admin account during initialization:', authError);
       }
 
-      isInitialized = true;
-    } catch (err) {
+      initState.isInitialized = true;
+      return db;
+    } catch (err: any) {
       console.error('[Database] Error during database post-connect initialization:', err);
+      if (err && typeof err === 'object') {
+        err.statusCode = 503;
+      }
+      throw err;
     } finally {
-      initPromise = null;
+      initState.initPromise = null;
     }
   })();
 
-  await initPromise;
-  return db;
+  return await initState.initPromise;
 }
 
 /**
  * Resets the initialization state (used for testing and disconnection scenarios).
  */
 export function resetInitializationState(): void {
-  isInitialized = false;
-  initPromise = null;
+  initState.isInitialized = false;
+  initState.initPromise = null;
 }
 
 /**
@@ -70,7 +92,7 @@ export async function databaseMiddleware(
   _res: Response,
   next: NextFunction
 ): Promise<void> {
-  // Let health endpoint report actual DB status without failing early with a 500
+  // Let health endpoint report actual DB status without failing early with a 503
   if (
     req.path === '/health' ||
     req.path === '/api/v1/health' ||
@@ -84,7 +106,16 @@ export async function databaseMiddleware(
   try {
     await ensureDatabaseInitialized();
     next();
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    console.error(
+      `[DatabaseMiddleware] Database initialization failed for ${req.method} ${req.originalUrl}:`,
+      error?.message || error
+    );
+    const dbError: any = new Error(
+      'Database service is currently unavailable. Please retry shortly.'
+    );
+    dbError.statusCode = 503;
+    dbError.details = env.NODE_ENV === 'development' ? error?.message : undefined;
+    next(dbError);
   }
 }
