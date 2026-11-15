@@ -12,9 +12,18 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
 
-// Public read routes
+// Public read routes return the sanitized public player projection.
 router.get('/', validateQuery(playerQuerySchema), asyncHandler(PlayerController.getAll));
 router.get('/slug/:slug', validateParams(slugParamSchema), asyncHandler(PlayerController.getBySlug));
+
+// Protected admin read route returns full player documents, including private fields.
+router.get(
+  '/admin',
+  requireAdmin,
+  validateQuery(playerQuerySchema),
+  asyncHandler(PlayerController.getAllAdmin)
+);
+
 router.get('/:id', validateParams(idParamSchema), asyncHandler(PlayerController.getById));
 
 // Protected admin write routes

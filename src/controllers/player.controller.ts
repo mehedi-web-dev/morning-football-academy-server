@@ -4,9 +4,14 @@ import { PlayerRepository } from '../repositories/player.repository.js';
 import { PlayerDocument } from '../types/player.types.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { getPaginationOptions, buildPaginationMeta } from '../utils/pagination.js';
+import { toPublicPlayer } from '../utils/publicPlayer.js';
 
 export class PlayerController {
-  static async getAll(req: Request, res: Response): Promise<void> {
+  private static async listPlayers(
+    req: Request,
+    res: Response,
+    includePrivate: boolean
+  ): Promise<void> {
     const { page, limit, skip } = getPaginationOptions(req.query);
     const { search, position, isActive, sortBy, sortOrder } = req.query as {
       search?: string;
@@ -40,7 +45,17 @@ export class PlayerController {
     ]);
 
     const paginationMeta = buildPaginationMeta(total, page, limit);
-    sendSuccess(res, players, 'Players retrieved successfully', 200, paginationMeta);
+    const responseData = includePrivate ? players : players.map(toPublicPlayer);
+
+    sendSuccess(res, responseData, 'Players retrieved successfully', 200, paginationMeta);
+  }
+
+  static async getAll(req: Request, res: Response): Promise<void> {
+    await PlayerController.listPlayers(req, res, false);
+  }
+
+  static async getAllAdmin(req: Request, res: Response): Promise<void> {
+    await PlayerController.listPlayers(req, res, true);
   }
 
   static async getById(req: Request, res: Response): Promise<void> {
@@ -52,7 +67,7 @@ export class PlayerController {
       return;
     }
 
-    sendSuccess(res, player, 'Player retrieved successfully');
+    sendSuccess(res, toPublicPlayer(player), 'Player retrieved successfully');
   }
 
   static async getBySlug(req: Request, res: Response): Promise<void> {
@@ -64,7 +79,7 @@ export class PlayerController {
       return;
     }
 
-    sendSuccess(res, player, 'Player retrieved successfully');
+    sendSuccess(res, toPublicPlayer(player), 'Player retrieved successfully');
   }
 
   static async create(req: Request, res: Response): Promise<void> {
