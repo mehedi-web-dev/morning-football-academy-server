@@ -104,6 +104,45 @@ export async function initializeIndexes(database?: Db): Promise<IndexInitResult[
     indexes: accountIndexes.map((idx) => idx.name as string),
   });
 
+  // 9. Tournaments Indexes
+  const tournamentIndexes: IndexDescription[] = [
+    { key: { slug: 1 }, unique: true, name: 'uniq_tournament_slug' },
+    { key: { status: 1 }, name: 'idx_tournament_status' },
+    { key: { season: 1 }, name: 'idx_tournament_season' },
+    { key: { createdAt: -1 }, name: 'idx_tournament_createdAt' },
+  ];
+  await db.collection('tournaments').createIndexes(tournamentIndexes);
+  results.push({
+    collection: 'tournaments',
+    indexes: tournamentIndexes.map((idx) => idx.name as string),
+  });
+
+  // 10. Tournament Teams Indexes
+  const tournamentTeamIndexes: IndexDescription[] = [
+    { key: { tournamentId: 1, name: 1 }, unique: true, name: 'uniq_tournament_team_name' },
+    { key: { tournamentId: 1, playerIds: 1 }, unique: true, name: 'uniq_tournament_player' },
+    { key: { tournamentId: 1 }, name: 'idx_tournament_team_tournamentId' },
+    { key: { playerIds: 1 }, name: 'idx_tournament_team_playerIds' },
+  ];
+  await db.collection('tournament_teams').createIndexes(tournamentTeamIndexes);
+  results.push({
+    collection: 'tournament_teams',
+    indexes: tournamentTeamIndexes.map((idx) => idx.name as string),
+  });
+
+  // 11. Tournament Matches Indexes
+  const tournamentMatchIndexes: IndexDescription[] = [
+    { key: { tournamentId: 1, matchNumber: 1 }, unique: true, name: 'uniq_tournament_match_number' },
+    { key: { tournamentId: 1, stage: 1, status: 1 }, name: 'idx_tournament_match_stage_status' },
+    { key: { tournamentId: 1, round: 1 }, name: 'idx_tournament_match_round' },
+    { key: { 'goals.playerId': 1 }, name: 'idx_tournament_match_goal_scorer' },
+  ];
+  await db.collection('tournament_matches').createIndexes(tournamentMatchIndexes);
+  results.push({
+    collection: 'tournament_matches',
+    indexes: tournamentMatchIndexes.map((idx) => idx.name as string),
+  });
+
   console.log('[Database] All collection indexes successfully initialized.');
   return results;
 }
