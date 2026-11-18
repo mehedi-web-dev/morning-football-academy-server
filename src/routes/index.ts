@@ -6,6 +6,7 @@ import resultRouter from './result.routes.js';
 import galleryRouter from './gallery.routes.js';
 import registrationRouter from './registration.routes.js';
 import tournamentRouter from './tournament.routes.js';
+import friendlySeriesRouter from './friendly-series.routes.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/results', resultRouter);
 router.use('/gallery', galleryRouter);
 router.use('/registrations', registrationRouter);
 router.use('/tournaments', tournamentRouter);
+router.use('/friendly-series', friendlySeriesRouter);
 
 export default router;

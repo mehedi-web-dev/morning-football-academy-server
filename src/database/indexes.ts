@@ -143,6 +143,34 @@ export async function initializeIndexes(database?: Db): Promise<IndexInitResult[
     indexes: tournamentMatchIndexes.map((idx) => idx.name as string),
   });
 
+  // 12. Friendly Series Indexes
+  const friendlySeriesIndexes: IndexDescription[] = [
+    { key: { slug: 1 }, unique: true, name: 'uniq_friendly_series_slug' },
+    { key: { status: 1 }, name: 'idx_friendly_series_status' },
+    { key: { format: 1 }, name: 'idx_friendly_series_format' },
+    { key: { teamAId: 1 }, name: 'idx_friendly_series_teamAId' },
+    { key: { teamBId: 1 }, name: 'idx_friendly_series_teamBId' },
+    { key: { createdAt: -1 }, name: 'idx_friendly_series_createdAt' },
+  ];
+  await db.collection('friendly_series').createIndexes(friendlySeriesIndexes);
+  results.push({
+    collection: 'friendly_series',
+    indexes: friendlySeriesIndexes.map((idx) => idx.name as string),
+  });
+
+  // 13. Friendly Series Matches Indexes
+  const friendlySeriesMatchIndexes: IndexDescription[] = [
+    { key: { seriesId: 1, matchNumber: 1 }, unique: true, name: 'uniq_friendly_match_series_number' },
+    { key: { seriesId: 1, status: 1 }, name: 'idx_friendly_match_series_status' },
+    { key: { seriesId: 1 }, name: 'idx_friendly_match_seriesId' },
+    { key: { 'goals.playerId': 1 }, name: 'idx_friendly_match_goal_scorer' },
+  ];
+  await db.collection('friendly_series_matches').createIndexes(friendlySeriesMatchIndexes);
+  results.push({
+    collection: 'friendly_series_matches',
+    indexes: friendlySeriesMatchIndexes.map((idx) => idx.name as string),
+  });
+
   console.log('[Database] All collection indexes successfully initialized.');
   return results;
 }
