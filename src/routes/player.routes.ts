@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PlayerController } from '../controllers/player.controller.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
+import { handlePlayerImageUpload } from '../middleware/upload.middleware.js';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate.middleware.js';
 import { idParamSchema, slugParamSchema } from '../validators/common.validator.js';
 import {
@@ -25,6 +26,14 @@ router.get(
 );
 
 router.get('/:id', validateParams(idParamSchema), asyncHandler(PlayerController.getById));
+
+// Protected admin player image upload
+router.post(
+  '/upload-image',
+  requireAdmin,
+  handlePlayerImageUpload,
+  asyncHandler(PlayerController.uploadImage)
+);
 
 // Protected admin write routes
 router.post('/', requireAdmin, validateBody(createPlayerSchema), asyncHandler(PlayerController.create));

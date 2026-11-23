@@ -19,6 +19,7 @@ export interface EnvConfig {
   BETTER_AUTH_URL: string;
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD: string;
+  IMGBB_API_KEY: string;
 }
 
 const nodeEnv = process.env.NODE_ENV || 'development';
@@ -79,4 +80,5 @@ export const env: EnvConfig = {
   BETTER_AUTH_URL: betterAuthUrl,
   ADMIN_EMAIL: (process.env.ADMIN_EMAIL || 'admin@morningfootball.com').toLowerCase().trim(),
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || '',
+  IMGBB_API_KEY: process.env.IMGBB_API_KEY?.trim() || '',
 };

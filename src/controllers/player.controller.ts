@@ -5,6 +5,7 @@ import { PlayerDocument } from '../types/player.types.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { getPaginationOptions, buildPaginationMeta } from '../utils/pagination.js';
 import { toPublicPlayer } from '../utils/publicPlayer.js';
+import { ImgBBService } from '../services/imgbb.service.js';
 
 export class PlayerController {
   private static async listPlayers(
@@ -125,5 +126,24 @@ export class PlayerController {
     }
 
     sendSuccess(res, { deleted: true, id }, 'Player deleted successfully');
+  }
+
+  static async uploadImage(req: Request, res: Response): Promise<void> {
+    if (!req.file) {
+      sendError(res, 'Image file is required under field "image"', 400);
+      return;
+    }
+
+    const uploadResult = await ImgBBService.uploadImage(
+      req.file.buffer,
+      req.file.originalname
+    );
+
+    sendSuccess(
+      res,
+      { imageUrl: uploadResult.imageUrl },
+      'Player image uploaded successfully',
+      200
+    );
   }
 }
